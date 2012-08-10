@@ -69,31 +69,8 @@ do_notify_vbucket_update(BucketName, VBucket, Body) ->
     ResponseStatus =
         case couch_db:open_int(DbName, []) of
             {ok, Db} ->
-                try
-                    case couch_db:update_header_pos(Db, FileVersion, NewPos) of
-                        ok ->
-                            ?SUCCESS;
-                        retry_new_file_version ->
-                            %% Retry, can happen when couchdb compacts the file
-                            ?log_debug("sending back retry_new_file_version"),
-                            ?ETMPFAIL;
-                        update_behind_couchdb ->
-                            %% shouldn't happen, somehow we wrote to a file and are behind
-                            %% of what couchdb has, maybe someone is updating the file
-                            %% on the couchdb side.
-                            ?log_error("~s vbucket ~p behind couchdb version on update.~n",
-                                       [BucketName, VBucket]),
-                            ?EINVAL;
-                        update_file_ahead_of_couchdb ->
-                            %% shouldn't happen, somehow we wrote to a file and are ahead
-                            %% of what couchdb has.
-                            ?log_error("~s vbucket ~p ahead of couchdb version on update.~n",
-                                       [BucketName, VBucket]),
-                            ?EINVAL
-                    end
-                after
-                    couch_db:close(Db)
-                end;
+                couch_db:close(Db),
+                ?SUCCESS;
             {not_found,no_db_file} ->
                 ?log_error("~s vbucket ~p file deleted or missing.~n",
                            [BucketName, VBucket]),
